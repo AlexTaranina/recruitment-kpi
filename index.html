@@ -1,0 +1,1452 @@
+<!DOCTYPE html>
+<html lang="en" x-data="dashboard()" :class="{ 'dark': darkMode }">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Recruiter KPI Dashboard — Olena | December 2025</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#6366f1',
+                        secondary: '#8b5cf6',
+                        accent: '#06b6d4',
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        [x-cloak] { display: none !important; }
+        .editable:hover { background-color: rgba(99, 102, 241, 0.1); cursor: text; }
+        .editable:focus { outline: 2px solid #6366f1; border-radius: 4px; }
+        .card-hover:hover { transform: translateY(-2px); box-shadow: 0 10px 40px rgba(0,0,0,0.1); }
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: #f1f5f9; border-radius: 3px; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+        .dark ::-webkit-scrollbar-track { background: #1e293b; }
+        .dark ::-webkit-scrollbar-thumb { background: #475569; }
+        .tab-btn.active { background: linear-gradient(135deg, #6366f1, #8b5cf6); color: white; }
+        .chat-bubble { max-width: 80%; }
+        .sparkline { display: flex; align-items: flex-end; gap: 2px; height: 30px; }
+        .sparkline-bar { width: 4px; background: #6366f1; border-radius: 2px; transition: height 0.3s; }
+        .mood-btn { transition: all 0.2s; }
+        .mood-btn:hover { transform: scale(1.2); }
+        .mood-btn.selected { transform: scale(1.3); box-shadow: 0 0 10px rgba(99, 102, 241, 0.5); }
+        textarea.auto-grow { resize: vertical; min-height: 60px; }
+    </style>
+</head>
+<body class="bg-gradient-to-br from-slate-50 to-slate-100 dark:from-gray-900 dark:to-gray-800 min-h-screen transition-colors duration-300">
+    <div class="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 py-6">
+        
+        <!-- HEADER -->
+        <header class="mb-6">
+            <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+                <div>
+                    <h1 class="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white">
+                        Recruiter KPI Dashboard
+                    </h1>
+                    <div class="flex items-center gap-3 mt-2">
+                        <span class="px-3 py-1 bg-indigo-100 dark:bg-indigo-900/50 text-indigo-700 dark:text-indigo-300 rounded-full text-sm font-medium">December 2025</span>
+                        <span class="px-3 py-1 bg-violet-100 dark:bg-violet-900/50 text-violet-700 dark:text-violet-300 rounded-full text-sm font-medium">Recruiter: Olena</span>
+                    </div>
+                </div>
+                <div class="flex items-center gap-3">
+                    <button @click="exportData()" class="px-4 py-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg text-sm hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
+                        Export Data
+                    </button>
+                    <button @click="darkMode = !darkMode; saveAll()" class="p-2 rounded-lg bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
+                        <svg x-show="!darkMode" class="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"/></svg>
+                        <svg x-show="darkMode" x-cloak class="w-5 h-5 text-yellow-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"/></svg>
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Navigation Tabs -->
+            <div class="mt-6 flex flex-wrap gap-2">
+                <template x-for="tab in tabs" :key="'tab-' + tab.id">
+                    <button @click="activeTab = tab.id" 
+                            :class="activeTab === tab.id ? 'active' : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'"
+                            class="tab-btn px-4 py-2 rounded-lg text-sm font-medium transition-all border border-gray-200 dark:border-gray-700"
+                            x-text="tab.name"></button>
+                </template>
+            </div>
+        </header>
+
+        <!-- ============================================== -->
+        <!-- TAB: OVERVIEW -->
+        <!-- ============================================== -->
+        <div x-show="activeTab === 'overview'" x-cloak>
+            
+            <!-- KPI CARDS -->
+            <section class="mb-8">
+                <h2 class="text-lg font-semibold text-gray-700 dark:text-gray-300 mb-4 flex items-center gap-2">
+                    <svg class="w-5 h-5 text-indigo-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
+                    Hiring KPIs
+                </h2>
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                    <!-- PH Hires -->
+                    <div class="bg-white dark:bg-gray-800 rounded-xl p-5 shadow-sm border border-gray-100 dark:border-gray-700 card-hover transition-all">
+                        <div class="flex items-start justify-between">
+                            <div class="flex-1">
+                                <p class="text-sm font-medium text-gray-500 dark:text-gray-400">PH Hires</p>
+                                <div class="mt-2 flex items-baseline gap-2">
+                                    <input type="number" x-model.number="kpis.phHires" @input="saveAll()" class="text-3xl font-bold text-emerald-600 dark:text-emerald-400 bg-transparent border-none w-16 p-0 focus:ring-0">
+                                    <span class="text-gray-400">/ 4</span>
+                                </div>
+                                <div class="mt-3 h-2 bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden">
+                                    <div class="h-full rounded-full transition-all duration-500" :class="getProgressColor(((kpis.phHires || 0)/4)*100)" :style="'width: ' + Math.min(((kpis.phHires || 0)/4)*100, 100) + '%'"></div>
+                                </div>
+                                <p class="mt-2 text-xs text-gray-400" x-text="Math.round(((kpis.phHires || 0)/4)*100) + '% of target'"></p>
+                            </div>
+                            <div class="p-3 rounded-lg bg-emerald-100 dark:bg-emerald-900/50">
+                                <span class="text-2xl">🇵🇭</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Experienced Buyers -->
+                    <div class="bg-white dark:bg-gray-800 rounded-xl p-5 shadow-sm border border-gray-100 dark:border-gray-700 card-hover transition-all">
+                        <div class="flex items-start justify-between">
+                            <div class="flex-1">
+                                <p class="text-sm font-medium text-gray-500 dark:text-gray-400">Experienced Buyers Hired</p>
+                                <div class="mt-2 flex items-baseline gap-2">
+                                    <input type="number" x-model.number="kpis.expBuyers" @input="saveAll()" class="text-3xl font-bold text-violet-600 dark:text-violet-400 bg-transparent border-none w-16 p-0 focus:ring-0">
+                                    <span class="text-gray-400">/ 4</span>
+                                </div>
+                                <div class="mt-3 h-2 bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden">
+                                    <div class="h-full rounded-full transition-all duration-500" :class="getProgressColor(((kpis.expBuyers || 0)/4)*100)" :style="'width: ' + Math.min(((kpis.expBuyers || 0)/4)*100, 100) + '%'"></div>
+                                </div>
+                                <p class="mt-2 text-xs text-gray-400" x-text="Math.round(((kpis.expBuyers || 0)/4)*100) + '% of target'"></p>
+                            </div>
+                            <div class="p-3 rounded-lg bg-violet-100 dark:bg-violet-900/50">
+                                <svg class="w-6 h-6 text-violet-600 dark:text-violet-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z"/></svg>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Total Hires -->
+                    <div class="bg-white dark:bg-gray-800 rounded-xl p-5 shadow-sm border border-gray-100 dark:border-gray-700 card-hover transition-all">
+                        <div class="flex items-start justify-between">
+                            <div class="flex-1">
+                                <p class="text-sm font-medium text-gray-500 dark:text-gray-400">Total Hires <span class="text-xs text-indigo-500">(auto)</span></p>
+                                <div class="mt-2 flex items-baseline gap-2">
+                                    <span class="text-3xl font-bold text-indigo-600 dark:text-indigo-400" x-text="(kpis.phHires || 0) + (kpis.expBuyers || 0)"></span>
+                                    <span class="text-gray-400">/ 8</span>
+                                </div>
+                                <div class="mt-3 h-2 bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden">
+                                    <div class="h-full rounded-full transition-all duration-500" :class="getProgressColor((((kpis.phHires || 0) + (kpis.expBuyers || 0))/8)*100)" :style="'width: ' + Math.min((((kpis.phHires || 0) + (kpis.expBuyers || 0))/8)*100, 100) + '%'"></div>
+                                </div>
+                                <p class="mt-2 text-xs text-gray-400" x-text="Math.round((((kpis.phHires || 0) + (kpis.expBuyers || 0))/8)*100) + '% of target'"></p>
+                            </div>
+                            <div class="p-3 rounded-lg bg-indigo-100 dark:bg-indigo-900/50">
+                                <svg class="w-6 h-6 text-indigo-600 dark:text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/></svg>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Performance KPIs -->
+                <h2 class="text-lg font-semibold text-gray-700 dark:text-gray-300 mb-4 mt-6 flex items-center gap-2">
+                    <svg class="w-5 h-5 text-cyan-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"/></svg>
+                    Performance KPIs
+                </h2>
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                    <!-- Win Rate -->
+                    <div class="bg-white dark:bg-gray-800 rounded-xl p-5 shadow-sm border border-gray-100 dark:border-gray-700 card-hover transition-all">
+                        <div class="flex items-start justify-between">
+                            <div class="flex-1">
+                                <p class="text-sm font-medium text-gray-500 dark:text-gray-400">Win Rate <span class="text-xs text-cyan-500">(Outreach→Screened)</span></p>
+                                <div class="mt-2">
+                                    <span class="text-3xl font-bold text-cyan-600 dark:text-cyan-400" x-text="winRate + '%'"></span>
+                                </div>
+                                <div class="mt-3 h-2 bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden">
+                                    <div class="h-full bg-cyan-500 rounded-full transition-all duration-500" :style="'width: ' + winRate + '%'"></div>
+                                </div>
+                                <p class="mt-2 text-xs text-gray-400" x-text="funnelCounts.screened + ' screened / ' + funnelCounts.leadsOutreached + ' outreached'"></p>
+                            </div>
+                            <div class="p-3 rounded-lg bg-cyan-100 dark:bg-cyan-900/50">
+                                <svg class="w-6 h-6 text-cyan-600 dark:text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Weekly Interviews -->
+                    <div class="bg-white dark:bg-gray-800 rounded-xl p-5 shadow-sm border border-gray-100 dark:border-gray-700 card-hover transition-all">
+                        <div class="flex items-start justify-between">
+                            <div class="flex-1">
+                                <p class="text-sm font-medium text-gray-500 dark:text-gray-400">Weekly Interviews Scheduled</p>
+                                <div class="mt-2 flex items-baseline gap-2">
+                                    <input type="number" x-model.number="kpis.weeklyInterviews" @input="saveAll()" class="text-3xl font-bold text-amber-600 dark:text-amber-400 bg-transparent border-none w-16 p-0 focus:ring-0">
+                                    <span class="text-gray-400">/ 5 min</span>
+                                </div>
+                                <div class="mt-3 h-2 bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden">
+                                    <div class="h-full rounded-full transition-all duration-500" :class="getProgressColor(((kpis.weeklyInterviews || 0)/5)*100)" :style="'width: ' + Math.min(((kpis.weeklyInterviews || 0)/5)*100, 100) + '%'"></div>
+                                </div>
+                                <p class="mt-2 text-xs text-gray-400" x-text="Math.round(((kpis.weeklyInterviews || 0)/5)*100) + '% of minimum'"></p>
+                            </div>
+                            <div class="p-3 rounded-lg bg-amber-100 dark:bg-amber-900/50">
+                                <svg class="w-6 h-6 text-amber-600 dark:text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Reply Rate -->
+                    <div class="bg-white dark:bg-gray-800 rounded-xl p-5 shadow-sm border border-gray-100 dark:border-gray-700 card-hover transition-all">
+                        <div class="flex items-start justify-between">
+                            <div class="flex-1">
+                                <p class="text-sm font-medium text-gray-500 dark:text-gray-400">Overall Reply Rate <span class="text-xs text-pink-500">(auto)</span></p>
+                                <div class="mt-2">
+                                    <span class="text-3xl font-bold text-pink-600 dark:text-pink-400" x-text="overallReplyRate + '%'"></span>
+                                </div>
+                                <div class="mt-3 h-2 bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden">
+                                    <div class="h-full bg-pink-500 rounded-full transition-all duration-500" :style="'width: ' + overallReplyRate + '%'"></div>
+                                </div>
+                                <p class="mt-2 text-xs text-gray-400" x-text="totalReplies + ' replies / ' + totalOutreached + ' outreached'"></p>
+                            </div>
+                            <div class="p-3 rounded-lg bg-pink-100 dark:bg-pink-900/50">
+                                <svg class="w-6 h-6 text-pink-600 dark:text-pink-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- HIRING FUNNEL (AUTO-CALCULATED) -->
+            <section class="mb-8">
+                <h2 class="text-lg font-semibold text-gray-700 dark:text-gray-300 mb-4 flex items-center gap-2">
+                    <svg class="w-5 h-5 text-violet-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"/></svg>
+                    Hiring Funnel <span class="text-xs text-gray-400 ml-2">(Auto-calculated from candidates)</span>
+                </h2>
+                <div class="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm border border-gray-100 dark:border-gray-700">
+                    <div class="space-y-4">
+                        <template x-for="(stage, index) in statusOrder" :key="'funnel-stage-' + index">
+                            <div class="relative">
+                                <div class="flex items-center justify-between mb-2">
+                                    <div class="flex items-center gap-3">
+                                        <span class="w-8 h-8 rounded-full flex items-center justify-center text-white text-sm font-bold" :class="funnelColors[index]" x-text="index + 1"></span>
+                                        <span class="font-medium text-gray-700 dark:text-gray-200" x-text="stage"></span>
+                                    </div>
+                                    <div class="flex items-center gap-4 text-sm">
+                                        <span class="text-gray-500 dark:text-gray-400">
+                                            Count: 
+                                            <span class="font-semibold text-gray-700 dark:text-gray-200 px-2 py-1 bg-gray-100 dark:bg-gray-700 rounded" x-text="getStatusCount(stage)"></span>
+                                        </span>
+                                        <span x-show="index > 0" class="px-2 py-1 rounded-full text-xs font-medium" :class="getConversionClass(getFunnelConversion(index))" x-text="getFunnelConversion(index) + '% conv'"></span>
+                                    </div>
+                                </div>
+                                <div class="h-8 bg-gray-100 dark:bg-gray-700 rounded-lg overflow-hidden" :style="'width: ' + (100 - index * 8) + '%'">
+                                    <div class="h-full rounded-lg transition-all duration-700 flex items-center justify-end pr-3" :class="funnelColors[index]" :style="'width: ' + getFunnelWidth(stage) + '%'">
+                                        <span class="text-white text-sm font-medium" x-show="getFunnelWidth(stage) > 15" x-text="getStatusCount(stage)"></span>
+                                    </div>
+                                </div>
+                            </div>
+                        </template>
+                    </div>
+                </div>
+            </section>
+
+            <!-- SOURCE TRACKING -->
+            <section class="mb-8">
+                <h2 class="text-lg font-semibold text-gray-700 dark:text-gray-300 mb-4 flex items-center gap-2">
+                    <svg class="w-5 h-5 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"/></svg>
+                    Source Conversion Overview
+                </h2>
+                <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden">
+                    <div class="overflow-x-auto">
+                        <table class="w-full">
+                            <thead>
+                                <tr class="bg-gray-50 dark:bg-gray-700/50">
+                                    <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">Source</th>
+                                    <th class="px-4 py-3 text-center text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">Outreached</th>
+                                    <th class="px-4 py-3 text-center text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">Replied</th>
+                                    <th class="px-4 py-3 text-center text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">Reply Rate</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
+                                <template x-for="(source, sIdx) in sources" :key="'source-row-' + source.id + '-' + sIdx">
+                                    <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/30">
+                                        <td class="px-4 py-3">
+                                            <div class="flex items-center gap-2">
+                                                <span x-text="source.icon" class="text-xl"></span>
+                                                <span class="font-medium text-gray-700 dark:text-gray-200" x-text="source.name"></span>
+                                            </div>
+                                        </td>
+                                        <td class="px-4 py-3 text-center">
+                                            <input type="number" x-model.number="source.outreached" @input="saveAll()" class="w-16 text-center font-semibold text-gray-700 dark:text-gray-200 bg-transparent border border-gray-200 dark:border-gray-600 rounded px-2 py-1">
+                                        </td>
+                                        <td class="px-4 py-3 text-center">
+                                            <input type="number" x-model.number="source.replied" @input="saveAll()" class="w-16 text-center font-semibold text-gray-700 dark:text-gray-200 bg-transparent border border-gray-200 dark:border-gray-600 rounded px-2 py-1">
+                                        </td>
+                                        <td class="px-4 py-3 text-center">
+                                            <span class="px-2 py-1 rounded-full text-xs font-medium" :class="getConversionClass(getSourceReplyRate(source))" x-text="getSourceReplyRate(source) + '%'"></span>
+                                        </td>
+                                    </tr>
+                                </template>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <!-- INSIGHTS -->
+            <section class="mb-8">
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+                    <div class="bg-gradient-to-br from-indigo-500 to-violet-600 rounded-xl p-5 text-white">
+                        <h3 class="text-sm font-medium opacity-80">Recruiter Performance Health</h3>
+                        <div class="mt-3 flex items-end gap-2">
+                            <span class="text-4xl font-bold" x-text="healthScore"></span>
+                            <span class="text-lg opacity-80">/ 100</span>
+                        </div>
+                        <p class="mt-2 text-sm opacity-80" x-text="healthScoreLabel"></p>
+                    </div>
+                    
+                    <div class="bg-white dark:bg-gray-800 rounded-xl p-5 shadow-sm border border-gray-100 dark:border-gray-700">
+                        <h3 class="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3 flex items-center gap-2">
+                            <svg class="w-4 h-4 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+                            Pipeline Risk Alerts
+                        </h3>
+                        <div class="space-y-2">
+                            <template x-for="(alert, aIdx) in riskAlerts" :key="'risk-alert-' + aIdx">
+                                <p class="text-sm text-amber-600 dark:text-amber-400 flex items-start gap-2">
+                                    <span class="mt-1">•</span>
+                                    <span x-text="alert"></span>
+                                </p>
+                            </template>
+                            <p x-show="(riskAlerts || []).length === 0" class="text-sm text-gray-400">No alerts — pipeline healthy!</p>
+                        </div>
+                    </div>
+                    
+                    <div class="bg-white dark:bg-gray-800 rounded-xl p-5 shadow-sm border border-gray-100 dark:border-gray-700">
+                        <h3 class="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3 flex items-center gap-2">
+                            <svg class="w-4 h-4 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/></svg>
+                            Next 7 Days Focus
+                        </h3>
+                        <div class="space-y-2">
+                            <template x-for="(focus, fIdx) in suggestedFocus" :key="'focus-item-' + fIdx">
+                                <p class="text-sm text-gray-600 dark:text-gray-400 flex items-start gap-2">
+                                    <span class="text-emerald-500">→</span>
+                                    <span x-text="focus"></span>
+                                </p>
+                            </template>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </div>
+
+        <!-- ============================================== -->
+        <!-- TAB: CANDIDATES -->
+        <!-- ============================================== -->
+        <div x-show="activeTab === 'candidates'" x-cloak>
+            <!-- PEOPLE SUMMARY -->
+            <section class="mb-8">
+                <div class="flex items-center justify-between mb-4">
+                    <h2 class="text-lg font-semibold text-gray-700 dark:text-gray-300 flex items-center gap-2">
+                        <svg class="w-5 h-5 text-indigo-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"/></svg>
+                        People Summary Overview
+                    </h2>
+                    <button @click="addCandidate()" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-sm font-medium transition-colors flex items-center gap-2">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+                        Add Candidate
+                    </button>
+                </div>
+                <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden">
+                    <div class="overflow-x-auto">
+                        <table class="w-full">
+                            <thead>
+                                <tr class="bg-gray-50 dark:bg-gray-700/50">
+                                    <th class="px-3 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">Name</th>
+                                    <th class="px-3 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">Country</th>
+                                    <th class="px-3 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">Status</th>
+                                    <th class="px-3 py-3 text-center text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">Sources</th>
+                                    <th class="px-3 py-3 text-center text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">Replied</th>
+                                    <th class="px-3 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">Salary</th>
+                                    <th class="px-3 py-3 text-center text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">Contact</th>
+                                    <th class="px-3 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">Updated</th>
+                                    <th class="px-3 py-3 text-center text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
+                                <template x-for="(candidate, cIdx) in candidates" :key="'cand-row-' + candidate.id">
+                                    <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/30">
+                                        <td class="px-3 py-3">
+                                            <div class="flex items-center gap-2">
+                                                <div class="w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-bold" :class="getAvatarColor(cIdx)" x-text="getInitials(candidate.name)"></div>
+                                                <span class="font-medium text-gray-700 dark:text-gray-200" x-text="candidate.name || 'Unnamed'"></span>
+                                                <span x-show="candidate.video || candidate.videoLink" class="px-1.5 py-0.5 bg-violet-100 dark:bg-violet-900/50 text-violet-700 dark:text-violet-300 text-xs rounded">🎥</span>
+                                            </div>
+                                        </td>
+                                        <td class="px-3 py-3">
+                                            <div class="flex items-center gap-1">
+                                                <span x-text="getFlag(candidate.country)"></span>
+                                                <span class="text-gray-600 dark:text-gray-300 text-sm" x-text="candidate.country || '—'"></span>
+                                            </div>
+                                        </td>
+                                        <td class="px-3 py-3">
+                                            <span class="px-2 py-1 rounded-full text-xs font-medium" :class="getStatusClass(candidate.status)" x-text="candidate.status || 'New'"></span>
+                                        </td>
+                                        <td class="px-3 py-3">
+                                            <div class="flex items-center justify-center gap-1">
+                                                <template x-for="(srcId, srcIdx) in getAutoSources(candidate)" :key="'autosrc-' + candidate.id + '-' + srcId + '-' + srcIdx">
+                                                    <span x-text="getSourceIcon(srcId)" class="text-base" :title="srcId"></span>
+                                                </template>
+                                            </div>
+                                        </td>
+                                        <td class="px-3 py-3 text-center">
+                                            <span x-text="getSourceIcon(candidate.repliedFrom)" class="text-lg"></span>
+                                        </td>
+                                        <td class="px-3 py-3 text-gray-600 dark:text-gray-300 text-sm" x-text="candidate.salary || '—'"></td>
+                                        <td class="px-3 py-3">
+                                            <div class="flex items-center justify-center gap-2">
+                                                <a x-show="candidate.contact && candidate.contact.linkedin" :href="candidate.contact.linkedin" target="_blank" class="text-blue-600 hover:text-blue-800" title="LinkedIn">💼</a>
+                                                <a x-show="candidate.contact && candidate.contact.email" :href="'mailto:' + candidate.contact.email" class="text-gray-600 hover:text-gray-800" title="Email">📧</a>
+                                                <a x-show="candidate.contact && candidate.contact.phone" :href="'tel:' + candidate.contact.phone" class="text-green-600 hover:text-green-800" title="Phone">📞</a>
+                                            </div>
+                                        </td>
+                                        <td class="px-3 py-3 text-gray-500 dark:text-gray-400 text-xs" x-text="formatDate(candidate.lastUpdate)"></td>
+                                        <td class="px-3 py-3 text-center">
+                                            <button @click="openCandidateModal(cIdx)" class="text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 text-sm font-medium">Open</button>
+                                            <button @click="removeCandidate(cIdx)" class="text-red-500 hover:text-red-700 text-sm font-medium ml-2">×</button>
+                                        </td>
+                                    </tr>
+                                </template>
+                                <tr x-show="(candidates || []).length === 0">
+                                    <td colspan="9" class="px-4 py-8 text-center text-gray-400">No candidates yet. Click "Add Candidate" to start.</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <!-- GEO BREAKDOWN WITH STATUS COUNTS -->
+            <section class="mb-8">
+                <h2 class="text-lg font-semibold text-gray-700 dark:text-gray-300 mb-4 flex items-center gap-2">
+                    <svg class="w-5 h-5 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                    GEO Breakdown <span class="text-xs text-gray-400 ml-2">(Auto-generated with status counts)</span>
+                </h2>
+                <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden">
+                    <div class="overflow-x-auto">
+                        <table class="w-full">
+                            <thead>
+                                <tr class="bg-gray-50 dark:bg-gray-700/50">
+                                    <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">GEO</th>
+                                    <th class="px-4 py-3 text-center text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">Total</th>
+                                    <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">Status Breakdown</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
+                                <template x-for="(geo, geoIdx) in geoBreakdown" :key="'geo-row-' + geo.country + '-' + geoIdx">
+                                    <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/30">
+                                        <td class="px-4 py-3">
+                                            <div class="flex items-center gap-2">
+                                                <span x-text="getFlag(geo.country)" class="text-lg"></span>
+                                                <span class="font-medium text-gray-700 dark:text-gray-200" x-text="geo.country"></span>
+                                            </div>
+                                        </td>
+                                        <td class="px-4 py-3 text-center">
+                                            <span class="px-2 py-1 bg-indigo-100 dark:bg-indigo-900/50 text-indigo-700 dark:text-indigo-300 rounded-full text-sm font-medium" x-text="geo.total"></span>
+                                        </td>
+                                        <td class="px-4 py-3">
+                                            <div class="flex flex-wrap gap-1">
+                                                <template x-for="(status, statusIdx) in statusOrder" :key="'geo-status-' + geo.country + '-' + status + '-' + statusIdx">
+                                                    <span x-show="geo.statusCounts[status] > 0" 
+                                                          class="px-2 py-0.5 rounded text-xs whitespace-nowrap" 
+                                                          :class="getStatusClass(status)" 
+                                                          x-text="status + ': ' + geo.statusCounts[status]"></span>
+                                                </template>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                </template>
+                                <tr x-show="(geoBreakdown || []).length === 0">
+                                    <td colspan="3" class="px-4 py-8 text-center text-gray-400">No candidates added yet</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+        </div>
+
+        <!-- ============================================== -->
+        <!-- TAB: DAILY LOG -->
+        <!-- ============================================== -->
+        <div x-show="activeTab === 'daily'" x-cloak>
+            <section class="mb-8">
+                <div class="flex items-center justify-between mb-4">
+                    <h2 class="text-lg font-semibold text-gray-700 dark:text-gray-300 flex items-center gap-2">
+                        <svg class="w-5 h-5 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+                        Daily Summary Log
+                    </h2>
+                    <input type="date" x-model="selectedDate" @change="loadDailyLog()" class="px-4 py-2 border border-gray-200 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200">
+                </div>
+                
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    <!-- Daily Form -->
+                    <div class="lg:col-span-2 bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm border border-gray-100 dark:border-gray-700">
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-600 dark:text-gray-400 mb-2">IL Media Buyers Outreach</label>
+                                <div class="flex gap-2">
+                                    <input type="number" x-model.number="dailyLog.ilOutreached" @input="saveDailyLog()" placeholder="Outreached" class="flex-1 px-3 py-2 border border-gray-200 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-200 text-sm">
+                                    <input type="number" x-model.number="dailyLog.ilInterested" @input="saveDailyLog()" placeholder="Interested" class="flex-1 px-3 py-2 border border-gray-200 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-200 text-sm">
+                                </div>
+                            </div>
+                            
+                            <div>
+                                <label class="block text-sm font-medium text-gray-600 dark:text-gray-400 mb-2">IL Interviews Scheduled</label>
+                                <input type="text" x-model="dailyLog.ilInterviews" @input="saveDailyLog()" placeholder="Names + stages" class="w-full px-3 py-2 border border-gray-200 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-200 text-sm">
+                            </div>
+                            
+                            <div>
+                                <label class="block text-sm font-medium text-gray-600 dark:text-gray-400 mb-2">Non-Israeli Outreach</label>
+                                <div class="flex gap-2">
+                                    <input type="number" x-model.number="dailyLog.nonIlOutreached" @input="saveDailyLog()" placeholder="Outreached" class="flex-1 px-3 py-2 border border-gray-200 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-200 text-sm">
+                                    <input type="number" x-model.number="dailyLog.nonIlInterested" @input="saveDailyLog()" placeholder="Interested" class="flex-1 px-3 py-2 border border-gray-200 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-200 text-sm">
+                                </div>
+                            </div>
+                            
+                            <div>
+                                <label class="block text-sm font-medium text-gray-600 dark:text-gray-400 mb-2">Non-IL Interviews</label>
+                                <input type="text" x-model="dailyLog.nonIlInterviews" @input="saveDailyLog()" placeholder="Names + stages" class="w-full px-3 py-2 border border-gray-200 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-200 text-sm">
+                            </div>
+                            
+                            <div>
+                                <label class="block text-sm font-medium text-gray-600 dark:text-gray-400 mb-2">Follow-ups</label>
+                                <div class="flex gap-2">
+                                    <input type="number" x-model.number="dailyLog.followupsCount" @input="saveDailyLog()" placeholder="Count" class="w-20 px-3 py-2 border border-gray-200 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-200 text-sm">
+                                    <input type="text" x-model="dailyLog.followupsNotes" @input="saveDailyLog()" placeholder="Notes" class="flex-1 px-3 py-2 border border-gray-200 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-200 text-sm">
+                                </div>
+                            </div>
+                            
+                            <div>
+                                <label class="block text-sm font-medium text-gray-600 dark:text-gray-400 mb-2">Senior HR</label>
+                                <div class="flex gap-2">
+                                    <input type="number" x-model.number="dailyLog.seniorHrOutreach" @input="saveDailyLog()" placeholder="Outreach" class="flex-1 px-3 py-2 border border-gray-200 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-200 text-sm">
+                                    <input type="number" x-model.number="dailyLog.seniorHrInterviews" @input="saveDailyLog()" placeholder="Interviews" class="flex-1 px-3 py-2 border border-gray-200 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-200 text-sm">
+                                </div>
+                            </div>
+                            
+                            <div class="md:col-span-2">
+                                <label class="block text-sm font-medium text-gray-600 dark:text-gray-400 mb-2">Senior HR with Alex</label>
+                                <input type="text" x-model="dailyLog.seniorHrAlex" @input="saveDailyLog()" class="w-full px-3 py-2 border border-gray-200 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-200 text-sm">
+                            </div>
+                            
+                            <div class="md:col-span-2">
+                                <label class="block text-sm font-medium text-gray-600 dark:text-gray-400 mb-2">Additional Tasks + Time</label>
+                                <textarea x-model="dailyLog.additionalTasks" @input="saveDailyLog()" rows="2" class="w-full px-3 py-2 border border-gray-200 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-200 text-sm"></textarea>
+                            </div>
+                            
+                            <div class="md:col-span-2">
+                                <label class="block text-sm font-medium text-gray-600 dark:text-gray-400 mb-2">Requests / Blockers</label>
+                                <textarea x-model="dailyLog.blockers" @input="saveDailyLog()" rows="2" class="w-full px-3 py-2 border border-gray-200 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-200 text-sm"></textarea>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Day Summary Preview -->
+                    <div class="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm border border-gray-100 dark:border-gray-700">
+                        <h3 class="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3 flex items-center gap-2">
+                            <span>📋</span> Day Summary Preview
+                        </h3>
+                        <div class="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-4 text-sm font-mono text-gray-600 dark:text-gray-300 whitespace-pre-wrap" x-text="generateDaySummary()"></div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Monthly Overview -->
+            <section class="mb-8">
+                <h2 class="text-lg font-semibold text-gray-700 dark:text-gray-300 mb-4 flex items-center gap-2">
+                    <svg class="w-5 h-5 text-violet-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
+                    Monthly Overview
+                </h2>
+                <div class="grid grid-cols-2 lg:grid-cols-5 gap-4">
+                    <div class="bg-white dark:bg-gray-800 rounded-xl p-4 shadow-sm border border-gray-100 dark:border-gray-700">
+                        <p class="text-sm text-gray-500 dark:text-gray-400">IL Outreach</p>
+                        <p class="text-2xl font-bold text-gray-700 dark:text-gray-200 mt-1" x-text="monthlyStats.ilOutreached || 0"></p>
+                        <p class="text-xs text-emerald-500 mt-1" x-text="(monthlyStats.ilInterested || 0) + ' interested'"></p>
+                    </div>
+                    <div class="bg-white dark:bg-gray-800 rounded-xl p-4 shadow-sm border border-gray-100 dark:border-gray-700">
+                        <p class="text-sm text-gray-500 dark:text-gray-400">Non-IL Outreach</p>
+                        <p class="text-2xl font-bold text-gray-700 dark:text-gray-200 mt-1" x-text="monthlyStats.nonIlOutreached || 0"></p>
+                        <p class="text-xs text-emerald-500 mt-1" x-text="(monthlyStats.nonIlInterested || 0) + ' interested'"></p>
+                    </div>
+                    <div class="bg-white dark:bg-gray-800 rounded-xl p-4 shadow-sm border border-gray-100 dark:border-gray-700">
+                        <p class="text-sm text-gray-500 dark:text-gray-400">Senior HR</p>
+                        <p class="text-2xl font-bold text-gray-700 dark:text-gray-200 mt-1" x-text="monthlyStats.seniorHrOutreach || 0"></p>
+                        <p class="text-xs text-cyan-500 mt-1" x-text="(monthlyStats.seniorHrInterviews || 0) + ' interviews'"></p>
+                    </div>
+                    <div class="bg-white dark:bg-gray-800 rounded-xl p-4 shadow-sm border border-gray-100 dark:border-gray-700">
+                        <p class="text-sm text-gray-500 dark:text-gray-400">Follow-ups</p>
+                        <p class="text-2xl font-bold text-gray-700 dark:text-gray-200 mt-1" x-text="monthlyStats.followups || 0"></p>
+                    </div>
+                    <div class="bg-white dark:bg-gray-800 rounded-xl p-4 shadow-sm border border-gray-100 dark:border-gray-700">
+                        <p class="text-sm text-gray-500 dark:text-gray-400">Days Logged</p>
+                        <p class="text-2xl font-bold text-gray-700 dark:text-gray-200 mt-1" x-text="monthlyStats.daysLogged || 0"></p>
+                    </div>
+                </div>
+            </section>
+        </div>
+
+        <!-- ============================================== -->
+        <!-- TAB: TEAM -->
+        <!-- ============================================== -->
+        <div x-show="activeTab === 'team'" x-cloak>
+            <!-- Team Wellbeing Overview -->
+            <section class="mb-8">
+                <h2 class="text-lg font-semibold text-gray-700 dark:text-gray-300 mb-4 flex items-center gap-2">
+                    <span>💚</span> Team Wellbeing Overview
+                </h2>
+                <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+                    <div class="bg-gradient-to-br from-pink-500 to-rose-600 rounded-xl p-4 text-white">
+                        <p class="text-sm opacity-80">Avg Satisfaction</p>
+                        <p class="text-3xl font-bold mt-1" x-text="teamWellbeingStats.avgSatisfaction.toFixed(1)"></p>
+                    </div>
+                    <div class="bg-gradient-to-br from-violet-500 to-purple-600 rounded-xl p-4 text-white">
+                        <p class="text-sm opacity-80">Avg Task Mgmt</p>
+                        <p class="text-3xl font-bold mt-1" x-text="teamWellbeingStats.avgTaskMgmt.toFixed(1)"></p>
+                    </div>
+                    <div class="bg-gradient-to-br from-cyan-500 to-blue-600 rounded-xl p-4 text-white">
+                        <p class="text-sm opacity-80">Avg Atmosphere</p>
+                        <p class="text-3xl font-bold mt-1" x-text="teamWellbeingStats.avgAtmosphere.toFixed(1)"></p>
+                    </div>
+                    <div class="bg-white dark:bg-gray-800 rounded-xl p-4 shadow-sm border border-gray-100 dark:border-gray-700">
+                        <p class="text-sm text-gray-500">Mood Heatmap</p>
+                        <div class="flex gap-1 mt-2">
+                            <template x-for="(mood, moodIdx) in ['😊', '🙂', '😐', '😔', '😩']" :key="'mood-heat-' + moodIdx">
+                                <div class="text-center">
+                                    <span class="text-xl" x-text="mood"></span>
+                                    <p class="text-xs text-gray-500" x-text="teamWellbeingStats.moods[mood] || 0"></p>
+                                </div>
+                            </template>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Satisfaction Entries -->
+            <section class="mb-8">
+                <div class="flex items-center justify-between mb-4">
+                    <h2 class="text-lg font-semibold text-gray-700 dark:text-gray-300 flex items-center gap-2">
+                        <svg class="w-5 h-5 text-pink-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.828 14.828a4 4 0 01-5.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                        Team Satisfaction Board
+                    </h2>
+                    <button @click="addSatisfactionEntry()" class="px-4 py-2 bg-pink-600 hover:bg-pink-700 text-white rounded-lg text-sm font-medium transition-colors">+ Add Entry</button>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <template x-for="(entry, entryIdx) in satisfaction" :key="'sat-entry-' + entry.id">
+                        <div class="bg-white dark:bg-gray-800 rounded-xl p-5 shadow-sm border border-gray-100 dark:border-gray-700 relative">
+                            <button @click="removeSatisfactionEntry(entryIdx)" class="absolute top-3 right-3 text-gray-400 hover:text-red-500 text-xl">×</button>
+                            
+                            <div class="flex items-center gap-3 mb-4">
+                                <input type="text" x-model="entry.name" @input="saveAll()" placeholder="Team member" class="font-semibold text-gray-700 dark:text-gray-200 bg-transparent border-b border-gray-200 dark:border-gray-600 p-0 focus:ring-0 focus:border-indigo-500">
+                                <input type="date" x-model="entry.date" @input="saveAll()" class="text-xs text-gray-400 bg-transparent border-b border-gray-200 dark:border-gray-600 p-0">
+                            </div>
+                            
+                            <!-- Mood Selector -->
+                            <div class="mb-4">
+                                <label class="text-xs text-gray-500 mb-1 block">Mood</label>
+                                <div class="flex gap-2">
+                                    <template x-for="(mood, moodBtnIdx) in ['😊', '🙂', '😐', '😔', '😩']" :key="'mood-btn-' + entry.id + '-' + moodBtnIdx">
+                                        <button @click="entry.mood = mood; saveAll()" 
+                                                :class="entry.mood === mood ? 'selected' : ''"
+                                                class="mood-btn text-2xl p-1 rounded" x-text="mood"></button>
+                                    </template>
+                                </div>
+                            </div>
+                            
+                            <!-- Scores -->
+                            <div class="grid grid-cols-2 gap-3 mb-4">
+                                <div>
+                                    <label class="text-xs text-gray-500">Satisfaction (1-10)</label>
+                                    <input type="number" min="1" max="10" x-model.number="entry.score" @input="saveAll()" class="w-full px-2 py-1 border border-gray-200 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-sm">
+                                </div>
+                                <div>
+                                    <label class="text-xs text-gray-500">Task Mgmt (1-10)</label>
+                                    <input type="number" min="1" max="10" x-model.number="entry.taskMgmt" @input="saveAll()" class="w-full px-2 py-1 border border-gray-200 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-sm">
+                                </div>
+                                <div>
+                                    <label class="text-xs text-gray-500">Complexity (1-10)</label>
+                                    <input type="number" min="1" max="10" x-model.number="entry.complexity" @input="saveAll()" class="w-full px-2 py-1 border border-gray-200 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-sm">
+                                </div>
+                                <div>
+                                    <label class="text-xs text-gray-500">Atmosphere (1-10)</label>
+                                    <input type="number" min="1" max="10" x-model.number="entry.atmosphere" @input="saveAll()" class="w-full px-2 py-1 border border-gray-200 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-sm">
+                                </div>
+                            </div>
+                            
+                            <div class="space-y-3">
+                                <div>
+                                    <label class="text-xs text-gray-500">Summary</label>
+                                    <textarea x-model="entry.summary" @input="saveAll()" rows="2" class="w-full px-2 py-1 border border-gray-200 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-sm"></textarea>
+                                </div>
+                                <div>
+                                    <label class="text-xs text-gray-500">Suggestions for Change</label>
+                                    <textarea x-model="entry.suggestions" @input="saveAll()" rows="2" class="w-full px-2 py-1 border border-gray-200 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-sm"></textarea>
+                                </div>
+                                <div>
+                                    <label class="text-xs text-gray-500">Team Spirit Desires</label>
+                                    <input type="text" x-model="entry.teamSpirit" @input="saveAll()" placeholder="Teambuilding ideas..." class="w-full px-2 py-1 border border-gray-200 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-sm">
+                                </div>
+                                <div>
+                                    <label class="text-xs text-gray-500">Additional Requests</label>
+                                    <input type="text" x-model="entry.requests" @input="saveAll()" class="w-full px-2 py-1 border border-gray-200 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-sm">
+                                </div>
+                            </div>
+                        </div>
+                    </template>
+                </div>
+            </section>
+        </div>
+
+        <!-- ============================================== -->
+        <!-- TAB: IDEAS (IMPROVED) -->
+        <!-- ============================================== -->
+        <div x-show="activeTab === 'ideas'" x-cloak>
+            <section class="mb-8">
+                <div class="flex items-center justify-between mb-4">
+                    <h2 class="text-lg font-semibold text-gray-700 dark:text-gray-300 flex items-center gap-2">
+                        <svg class="w-5 h-5 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/></svg>
+                        HR Ideas / Strategy Board
+                    </h2>
+                    <button @click="addIdea()" class="px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-lg text-sm font-medium transition-colors">+ Add Idea</button>
+                </div>
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                    <template x-for="(idea, ideaIdx) in ideas" :key="'idea-card-' + idea.id">
+                        <div class="bg-white dark:bg-gray-800 rounded-xl p-5 shadow-sm border border-gray-100 dark:border-gray-700 relative">
+                            <button @click="removeIdea(ideaIdx)" class="absolute top-3 right-3 text-gray-400 hover:text-red-500 text-xl">×</button>
+                            
+                            <!-- 1. Title -->
+                            <input type="text" x-model="idea.name" @input="saveAll()" placeholder="Idea name" class="font-semibold text-gray-700 dark:text-gray-200 bg-transparent border-none p-0 focus:ring-0 w-full mb-3 text-lg">
+                            
+                            <!-- 2. Description (expandable) -->
+                            <div class="mb-3">
+                                <label class="text-xs text-gray-500">Description</label>
+                                <textarea x-model="idea.description" @input="saveAll()" rows="3" class="auto-grow w-full px-2 py-1 border border-gray-200 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-sm"></textarea>
+                            </div>
+                            
+                            <!-- 3. Expected Impact -->
+                            <div class="mb-3">
+                                <label class="text-xs text-gray-500">Expected Impact</label>
+                                <input type="text" x-model="idea.impact" @input="saveAll()" class="w-full px-2 py-1 border border-gray-200 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-sm">
+                            </div>
+                            
+                            <!-- 4. Timeline -->
+                            <div class="mb-3">
+                                <label class="text-xs text-gray-500">Timeline</label>
+                                <input type="text" x-model="idea.timeline" @input="saveAll()" class="w-full px-2 py-1 border border-gray-200 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-sm">
+                            </div>
+                            
+                            <!-- 5. Category -->
+                            <div class="mb-3">
+                                <label class="text-xs text-gray-500">Category</label>
+                                <select x-model="idea.category" @change="saveAll()" class="w-full px-2 py-1 border border-gray-200 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-sm">
+                                    <option value="tools">🔧 Tools</option>
+                                    <option value="culture">🎭 Culture</option>
+                                    <option value="recruiting">🎯 Recruiting Strategy</option>
+                                    <option value="process">⚙️ Operational Process</option>
+                                    <option value="development">📚 Personal Development</option>
+                                </select>
+                            </div>
+                            
+                            <!-- 6. Status -->
+                            <div class="mb-3">
+                                <label class="text-xs text-gray-500">Status</label>
+                                <select x-model="idea.status" @change="saveAll()" class="w-full px-2 py-1 border border-gray-200 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-sm">
+                                    <option value="Idea">💡 Idea</option>
+                                    <option value="In Progress">🔄 In Progress</option>
+                                    <option value="Implemented">✅ Implemented</option>
+                                </select>
+                            </div>
+                            
+                            <!-- 7. Alex Status (NEW) -->
+                            <div class="mb-3">
+                                <label class="text-xs text-gray-500 flex items-center gap-1">
+                                    <span class="text-indigo-500">👤</span> Alex Status
+                                </label>
+                                <textarea x-model="idea.alexStatus" @input="saveAll()" rows="2" placeholder="Alex's feedback or status update..." class="auto-grow w-full px-2 py-1 border border-gray-200 dark:border-gray-600 rounded bg-indigo-50 dark:bg-indigo-900/20 text-sm"></textarea>
+                            </div>
+                            
+                            <!-- 8. Olena Reply (NEW) -->
+                            <div class="mb-3">
+                                <label class="text-xs text-gray-500 flex items-center gap-1">
+                                    <span class="text-violet-500">👤</span> Olena Reply
+                                </label>
+                                <textarea x-model="idea.olenaReply" @input="saveAll()" rows="2" placeholder="Olena's response or notes..." class="auto-grow w-full px-2 py-1 border border-gray-200 dark:border-gray-600 rounded bg-violet-50 dark:bg-violet-900/20 text-sm"></textarea>
+                            </div>
+                        </div>
+                    </template>
+                </div>
+            </section>
+        </div>
+
+        <!-- ============================================== -->
+        <!-- CANDIDATE MODAL -->
+        <!-- ============================================== -->
+        <div x-show="showCandidateModal" x-cloak class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50" @click.self="showCandidateModal = false">
+            <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-y-auto" @click.stop>
+                <template x-if="currentCandidate !== null && candidates && candidates[currentCandidate]">
+                    <div class="p-6">
+                        <!-- Modal Header -->
+                        <div class="flex items-start justify-between mb-6">
+                            <div class="flex items-center gap-4">
+                                <div class="w-16 h-16 rounded-full flex items-center justify-center text-white text-xl font-bold" :class="getAvatarColor(currentCandidate)" x-text="getInitials(candidates[currentCandidate].name)"></div>
+                                <div>
+                                    <input type="text" x-model="candidates[currentCandidate].name" @input="saveAll()" class="text-xl font-bold text-gray-700 dark:text-gray-200 bg-transparent border-none p-0 focus:ring-0">
+                                    <select x-model="candidates[currentCandidate].country" @change="saveAll()" class="text-sm text-gray-500 bg-transparent border border-gray-200 dark:border-gray-600 rounded px-2 py-1 mt-1">
+                                        <option value="">Select Country</option>
+                                        <template x-for="(country, countryIdx) in countries" :key="'country-sel-' + countryIdx">
+                                            <option :value="country" x-text="getFlag(country) + ' ' + country"></option>
+                                        </template>
+                                    </select>
+                                </div>
+                            </div>
+                            <button @click="showCandidateModal = false" class="text-gray-400 hover:text-gray-600 text-2xl">×</button>
+                        </div>
+
+                        <!-- Contact Fields -->
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                            <div>
+                                <label class="text-xs text-gray-500">Email</label>
+                                <input type="email" x-model="candidates[currentCandidate].contact.email" @input="saveAll()" class="w-full px-3 py-2 border border-gray-200 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-sm">
+                            </div>
+                            <div>
+                                <label class="text-xs text-gray-500">Phone</label>
+                                <input type="tel" x-model="candidates[currentCandidate].contact.phone" @input="saveAll()" class="w-full px-3 py-2 border border-gray-200 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-sm">
+                            </div>
+                            <div>
+                                <label class="text-xs text-gray-500">WhatsApp</label>
+                                <input type="text" x-model="candidates[currentCandidate].contact.whatsapp" @input="saveAll()" class="w-full px-3 py-2 border border-gray-200 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-sm">
+                            </div>
+                            <div>
+                                <label class="text-xs text-gray-500">Telegram</label>
+                                <input type="text" x-model="candidates[currentCandidate].contact.telegram" @input="saveAll()" class="w-full px-3 py-2 border border-gray-200 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-sm">
+                            </div>
+                            <div>
+                                <label class="text-xs text-gray-500">LinkedIn URL</label>
+                                <input type="url" x-model="candidates[currentCandidate].contact.linkedin" @input="saveAll()" class="w-full px-3 py-2 border border-gray-200 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-sm">
+                            </div>
+                            <div>
+                                <label class="text-xs text-gray-500">Salary Expectation</label>
+                                <input type="text" x-model="candidates[currentCandidate].salary" @input="saveAll()" class="w-full px-3 py-2 border border-gray-200 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-sm">
+                            </div>
+                        </div>
+
+                        <!-- Video Section -->
+                        <div class="mb-6 p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
+                            <label class="text-sm font-medium text-gray-600 dark:text-gray-400 mb-2 block">Video</label>
+                            <div class="flex items-center gap-4">
+                                <input type="url" x-model="candidates[currentCandidate].videoLink" @input="saveAll()" placeholder="Paste video link (Loom, Drive...)" class="flex-1 px-3 py-2 border border-gray-200 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-sm">
+                                <label class="flex items-center gap-2 px-3 py-2 bg-violet-100 dark:bg-violet-900/50 text-violet-700 dark:text-violet-300 rounded-lg cursor-pointer hover:bg-violet-200 text-sm">
+                                    <span>📹 Upload</span>
+                                    <input type="file" accept="video/*" @change="uploadVideo($event, currentCandidate)" class="hidden">
+                                </label>
+                            </div>
+                            <div x-show="candidates[currentCandidate].video || candidates[currentCandidate].videoLink" class="mt-2 flex items-center gap-2">
+                                <span class="px-2 py-1 bg-emerald-100 dark:bg-emerald-900/50 text-emerald-700 dark:text-emerald-300 rounded text-xs">✓ Video Added</span>
+                                <a x-show="candidates[currentCandidate].videoLink" :href="candidates[currentCandidate].videoLink" target="_blank" class="text-blue-500 text-xs hover:underline">Open Link</a>
+                            </div>
+                        </div>
+
+                        <!-- Replied From Source -->
+                        <div class="mb-6">
+                            <label class="text-sm font-medium text-gray-600 dark:text-gray-400 mb-2 block">Replied From Source</label>
+                            <div class="flex flex-wrap gap-2">
+                                <template x-for="(src, srcIdx) in allSources" :key="'reply-from-' + src.id + '-' + srcIdx">
+                                    <button @click="candidates[currentCandidate].repliedFrom = candidates[currentCandidate].repliedFrom === src.id ? null : src.id; saveAll()" 
+                                            :class="candidates[currentCandidate].repliedFrom === src.id ? 'bg-emerald-100 dark:bg-emerald-900/50 border-emerald-400 ring-2 ring-emerald-400' : 'bg-gray-50 dark:bg-gray-700 border-gray-200 dark:border-gray-600'"
+                                            class="flex items-center gap-2 px-3 py-2 border rounded-lg transition-colors">
+                                        <span x-text="src.icon" class="text-xl"></span>
+                                        <span class="text-sm" x-text="src.name"></span>
+                                    </button>
+                                </template>
+                            </div>
+                        </div>
+
+                        <!-- Timeline with correct status order -->
+                        <div class="mb-6">
+                            <label class="text-sm font-medium text-gray-600 dark:text-gray-400 mb-2 block">Stage Timeline</label>
+                            <div class="space-y-2">
+                                <template x-for="(stage, stageIdx) in statusOrder" :key="'timeline-stage-' + stageIdx">
+                                    <div class="flex items-center gap-3 p-2 rounded-lg" :class="getTimelineRowClass(candidates[currentCandidate].timeline[stage])">
+                                        <div class="w-3 h-3 rounded-full" :class="getTimelineDotClass(candidates[currentCandidate].timeline[stage], stage)"></div>
+                                        <span class="w-32 text-sm font-medium text-gray-700 dark:text-gray-200" x-text="stage"></span>
+                                        <input type="date" 
+                                               x-model="candidates[currentCandidate].timeline[stage]"
+                                               @input="updateCandidateStatus(currentCandidate); saveAll()"
+                                               class="flex-1 px-2 py-1 border border-gray-200 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-sm">
+                                        <span class="text-xs px-2 py-1 rounded" :class="getTimelineStatusClass(candidates[currentCandidate].timeline[stage], stage)" x-text="getTimelineStatusText(candidates[currentCandidate].timeline[stage], stage)"></span>
+                                    </div>
+                                </template>
+                            </div>
+                        </div>
+
+                        <!-- Chat -->
+                        <div class="mb-6">
+                            <label class="text-sm font-medium text-gray-600 dark:text-gray-400 mb-2 block">Internal Chat</label>
+                            <div class="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-4 max-h-40 overflow-y-auto mb-3">
+                                <template x-for="(msg, msgIdx) in (candidates[currentCandidate].chat || [])" :key="'chat-msg-' + candidates[currentCandidate].id + '-' + msgIdx">
+                                    <div class="mb-3">
+                                        <div class="flex items-center gap-2 mb-1">
+                                            <span class="text-xs font-semibold text-indigo-600 dark:text-indigo-400" x-text="msg.author || 'Unknown'"></span>
+                                            <span class="text-xs text-gray-400" x-text="msg.timestamp || ''"></span>
+                                        </div>
+                                        <div class="chat-bubble bg-white dark:bg-gray-800 rounded-lg px-3 py-2 text-sm text-gray-700 dark:text-gray-200 shadow-sm" x-text="msg.text || ''"></div>
+                                    </div>
+                                </template>
+                                <p x-show="!candidates[currentCandidate].chat || candidates[currentCandidate].chat.length === 0" class="text-sm text-gray-400 text-center py-4">No messages yet</p>
+                            </div>
+                            <div class="flex gap-2">
+                                <select x-model="chatAuthor" class="px-3 py-2 border border-gray-200 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-sm">
+                                    <option value="Iryna">Iryna</option>
+                                    <option value="Olena">Olena</option>
+                                    <option value="Other">Other</option>
+                                </select>
+                                <input type="text" x-model="chatMessage" @keyup.enter="sendChatMessage(currentCandidate)" placeholder="Type a message..." class="flex-1 px-3 py-2 border border-gray-200 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-sm">
+                                <button @click="sendChatMessage(currentCandidate)" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-sm">Send</button>
+                            </div>
+                        </div>
+                    </div>
+                </template>
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <footer class="text-center text-sm text-gray-400 dark:text-gray-500 py-4 mt-8">
+            <p>Recruiter KPI Dashboard — Olena | December 2025</p>
+        </footer>
+    </div>
+
+    <script>
+        function dashboard() {
+            const uuid = () => 'id-' + Date.now() + '-' + Math.random().toString(36).substr(2, 9);
+            
+            // GLOBAL STATUS ORDER - MUST BE IDENTICAL EVERYWHERE
+            const STATUS_ORDER = [
+                'Leads Outreached',
+                'Screened',
+                'Alex Interview',
+                'Eden Interview',
+                'Kept For Future',
+                'Offer Sent',
+                'Hired',
+                'Rejected'
+            ];
+            
+            const FUNNEL_COLORS = [
+                'bg-indigo-500',
+                'bg-violet-500',
+                'bg-purple-500',
+                'bg-fuchsia-500',
+                'bg-pink-500',
+                'bg-cyan-500',
+                'bg-emerald-500',
+                'bg-red-500'
+            ];
+            
+            return {
+                darkMode: localStorage.getItem('dashboardDarkMode') === 'true',
+                activeTab: 'overview',
+                
+                // Status order available to template
+                statusOrder: STATUS_ORDER,
+                funnelColors: FUNNEL_COLORS,
+                
+                // Tabs (NO MINDMAP)
+                tabs: [
+                    { id: 'overview', name: '📊 Overview' },
+                    { id: 'candidates', name: '👥 Candidates' },
+                    { id: 'daily', name: '📅 Daily Log' },
+                    { id: 'team', name: '💬 Team' },
+                    { id: 'ideas', name: '💡 Ideas' }
+                ],
+
+                kpis: JSON.parse(localStorage.getItem('kpis')) || { phHires: 2, expBuyers: 3, weeklyInterviews: 7 },
+
+                allSources: [
+                    { id: 'whatsapp', name: 'WhatsApp', icon: '📱' },
+                    { id: 'sms', name: 'SMS', icon: '💬' },
+                    { id: 'email', name: 'Email', icon: '📧' },
+                    { id: 'linkedin', name: 'LinkedIn', icon: '💼' },
+                    { id: 'telegram', name: 'Telegram', icon: '✈️' }
+                ],
+                sources: JSON.parse(localStorage.getItem('sources')) || [
+                    { id: 'whatsapp', name: 'WhatsApp', icon: '📱', outreached: 45, replied: 18 },
+                    { id: 'sms', name: 'SMS', icon: '💬', outreached: 20, replied: 5 },
+                    { id: 'email', name: 'Email', icon: '📧', outreached: 80, replied: 22 },
+                    { id: 'linkedin', name: 'LinkedIn', icon: '💼', outreached: 60, replied: 15 },
+                    { id: 'telegram', name: 'Telegram', icon: '✈️', outreached: 30, replied: 12 }
+                ],
+                
+                candidates: [],
+                
+                showCandidateModal: false,
+                currentCandidate: null,
+                chatAuthor: 'Olena',
+                chatMessage: '',
+
+                countries: ['Philippines', 'Singapore', 'Poland', 'Ukraine', 'Israel', 'United States', 'United Kingdom', 'Germany', 'India', 'Brazil', 'Argentina', 'Mexico', 'Canada', 'Australia', 'South Africa', 'Nigeria', 'Egypt', 'Other'],
+
+                selectedDate: new Date().toISOString().split('T')[0],
+                dailyLog: { ilOutreached: 0, ilInterested: 0, ilInterviews: '', nonIlOutreached: 0, nonIlInterested: 0, nonIlInterviews: '', followupsCount: 0, followupsNotes: '', seniorHrOutreach: 0, seniorHrInterviews: 0, seniorHrAlex: '', additionalTasks: '', blockers: '' },
+
+                satisfaction: [],
+                ideas: [],
+
+                // Computed: Funnel counts from candidates
+                get funnelCounts() {
+                    const counts = {};
+                    STATUS_ORDER.forEach(s => counts[s] = 0);
+                    (this.candidates || []).forEach(c => {
+                        if (c.status && counts[c.status] !== undefined) {
+                            counts[c.status]++;
+                        }
+                    });
+                    return {
+                        leadsOutreached: counts['Leads Outreached'] || 0,
+                        screened: counts['Screened'] || 0,
+                        alexInterview: counts['Alex Interview'] || 0,
+                        edenInterview: counts['Eden Interview'] || 0,
+                        keptForFuture: counts['Kept For Future'] || 0,
+                        offerSent: counts['Offer Sent'] || 0,
+                        hired: counts['Hired'] || 0,
+                        rejected: counts['Rejected'] || 0
+                    };
+                },
+                
+                get winRate() {
+                    const out = this.funnelCounts.leadsOutreached || 0;
+                    const scr = this.funnelCounts.screened || 0;
+                    return out > 0 ? Math.round((scr / out) * 100) : 0;
+                },
+                get totalOutreached() {
+                    return (this.sources || []).reduce((sum, s) => sum + (s.outreached || 0), 0);
+                },
+                get totalReplies() {
+                    return (this.sources || []).reduce((sum, s) => sum + (s.replied || 0), 0);
+                },
+                get overallReplyRate() {
+                    return this.totalOutreached > 0 ? Math.round((this.totalReplies / this.totalOutreached) * 100) : 0;
+                },
+                
+                get geoBreakdown() {
+                    const geoMap = {};
+                    (this.candidates || []).forEach(c => {
+                        if (c.country) {
+                            if (!geoMap[c.country]) {
+                                geoMap[c.country] = { country: c.country, total: 0, statusCounts: {} };
+                                STATUS_ORDER.forEach(s => geoMap[c.country].statusCounts[s] = 0);
+                            }
+                            geoMap[c.country].total++;
+                            if (c.status && geoMap[c.country].statusCounts[c.status] !== undefined) {
+                                geoMap[c.country].statusCounts[c.status]++;
+                            }
+                        }
+                    });
+                    return Object.values(geoMap);
+                },
+                
+                get healthScore() {
+                    let score = 50;
+                    score += Math.min(this.winRate, 30);
+                    score += Math.min((((this.kpis.phHires || 0) + (this.kpis.expBuyers || 0)) / 8) * 20, 20);
+                    return Math.min(Math.round(score), 100);
+                },
+                get healthScoreLabel() {
+                    if (this.healthScore >= 80) return 'Excellent!';
+                    if (this.healthScore >= 60) return 'Good progress';
+                    if (this.healthScore >= 40) return 'Needs attention';
+                    return 'Critical';
+                },
+                get riskAlerts() {
+                    const alerts = [];
+                    if (this.funnelCounts.leadsOutreached < 10) alerts.push('Low outreach volume');
+                    if (this.winRate < 30 && this.funnelCounts.leadsOutreached > 0) alerts.push('Screening conversion below 30%');
+                    if ((this.kpis.weeklyInterviews || 0) < 5) alerts.push('Weekly interviews below minimum');
+                    return alerts;
+                },
+                get suggestedFocus() {
+                    const focus = [];
+                    if ((this.kpis.phHires || 0) < 4) focus.push('Prioritize Philippines pipeline');
+                    if (this.funnelCounts.alexInterview < 5) focus.push('Schedule more Alex interviews');
+                    focus.push('Follow up on pending screenings');
+                    return focus.slice(0, 4);
+                },
+                get monthlyStats() {
+                    const logs = JSON.parse(localStorage.getItem('dailyLogs') || '{}');
+                    const monthLogs = Object.entries(logs).filter(([date]) => date.startsWith('2025-12'));
+                    let stats = { ilOutreached: 0, ilInterested: 0, nonIlOutreached: 0, nonIlInterested: 0, seniorHrOutreach: 0, seniorHrInterviews: 0, followups: 0, daysLogged: monthLogs.length };
+                    monthLogs.forEach(([, log]) => {
+                        stats.ilOutreached += log.ilOutreached || 0;
+                        stats.ilInterested += log.ilInterested || 0;
+                        stats.nonIlOutreached += log.nonIlOutreached || 0;
+                        stats.nonIlInterested += log.nonIlInterested || 0;
+                        stats.seniorHrOutreach += log.seniorHrOutreach || 0;
+                        stats.seniorHrInterviews += log.seniorHrInterviews || 0;
+                        stats.followups += log.followupsCount || 0;
+                    });
+                    return stats;
+                },
+                get teamWellbeingStats() {
+                    const entries = this.satisfaction || [];
+                    const avgSatisfaction = entries.length ? entries.reduce((s, e) => s + (e.score || 0), 0) / entries.length : 0;
+                    const avgTaskMgmt = entries.length ? entries.reduce((s, e) => s + (e.taskMgmt || 0), 0) / entries.length : 0;
+                    const avgAtmosphere = entries.length ? entries.reduce((s, e) => s + (e.atmosphere || 0), 0) / entries.length : 0;
+                    const moods = { '😊': 0, '🙂': 0, '😐': 0, '😔': 0, '😩': 0 };
+                    entries.forEach(e => { if (e.mood && moods[e.mood] !== undefined) moods[e.mood]++; });
+                    return { avgSatisfaction, avgTaskMgmt, avgAtmosphere, moods };
+                },
+
+                init() {
+                    // Load candidates with proper structure
+                    const storedCandidates = JSON.parse(localStorage.getItem('candidates') || '[]');
+                    this.candidates = (storedCandidates || []).map(c => this.ensureCandidateStructure(c));
+                    
+                    // Load satisfaction
+                    const storedSat = JSON.parse(localStorage.getItem('satisfaction') || '[]');
+                    this.satisfaction = (storedSat || []).map(s => this.ensureSatisfactionStructure(s));
+                    
+                    // Load ideas with new fields
+                    const storedIdeas = JSON.parse(localStorage.getItem('ideas') || '[]');
+                    this.ideas = (storedIdeas || []).map(i => this.ensureIdeaStructure(i));
+                    
+                    this.loadDailyLog();
+                },
+
+                ensureCandidateStructure(c) {
+                    const timeline = {};
+                    STATUS_ORDER.forEach(s => {
+                        timeline[s] = (c.timeline && c.timeline[s]) || null;
+                    });
+                    
+                    return {
+                        id: c.id || uuid(),
+                        name: c.name || '',
+                        country: c.country || '',
+                        status: c.status || 'Leads Outreached',
+                        sourcesUsed: c.sourcesUsed || [],
+                        repliedFrom: c.repliedFrom || null,
+                        contact: {
+                            email: (c.contact && c.contact.email) || '',
+                            phone: (c.contact && c.contact.phone) || '',
+                            whatsapp: (c.contact && c.contact.whatsapp) || '',
+                            telegram: (c.contact && c.contact.telegram) || '',
+                            linkedin: (c.contact && c.contact.linkedin) || ''
+                        },
+                        salary: c.salary || '',
+                        video: c.video || '',
+                        videoLink: c.videoLink || '',
+                        timeline: timeline,
+                        chat: c.chat || [],
+                        lastUpdate: c.lastUpdate || new Date().toISOString()
+                    };
+                },
+                
+                ensureSatisfactionStructure(s) {
+                    return {
+                        id: s.id || uuid(),
+                        name: s.name || '',
+                        date: s.date || new Date().toISOString().split('T')[0],
+                        score: s.score || 7,
+                        taskMgmt: s.taskMgmt || 7,
+                        complexity: s.complexity || 5,
+                        atmosphere: s.atmosphere || 7,
+                        mood: s.mood || '🙂',
+                        summary: s.summary || '',
+                        suggestions: s.suggestions || '',
+                        teamSpirit: s.teamSpirit || '',
+                        requests: s.requests || ''
+                    };
+                },
+                
+                ensureIdeaStructure(i) {
+                    return {
+                        id: i.id || uuid(),
+                        name: i.name || 'New Idea',
+                        description: i.description || '',
+                        impact: i.impact || '',
+                        timeline: i.timeline || '',
+                        category: i.category || 'tools',
+                        status: i.status || 'Idea',
+                        alexStatus: i.alexStatus || '',
+                        olenaReply: i.olenaReply || ''
+                    };
+                },
+
+                saveAll() {
+                    localStorage.setItem('dashboardDarkMode', this.darkMode);
+                    localStorage.setItem('kpis', JSON.stringify(this.kpis || {}));
+                    localStorage.setItem('sources', JSON.stringify(this.sources || []));
+                    localStorage.setItem('candidates', JSON.stringify(this.candidates || []));
+                    localStorage.setItem('satisfaction', JSON.stringify(this.satisfaction || []));
+                    localStorage.setItem('ideas', JSON.stringify(this.ideas || []));
+                },
+
+                loadDailyLog() {
+                    const logs = JSON.parse(localStorage.getItem('dailyLogs') || '{}');
+                    this.dailyLog = logs[this.selectedDate] || { ilOutreached: 0, ilInterested: 0, ilInterviews: '', nonIlOutreached: 0, nonIlInterested: 0, nonIlInterviews: '', followupsCount: 0, followupsNotes: '', seniorHrOutreach: 0, seniorHrInterviews: 0, seniorHrAlex: '', additionalTasks: '', blockers: '' };
+                },
+
+                saveDailyLog() {
+                    const logs = JSON.parse(localStorage.getItem('dailyLogs') || '{}');
+                    logs[this.selectedDate] = this.dailyLog;
+                    localStorage.setItem('dailyLogs', JSON.stringify(logs));
+                },
+
+                generateDaySummary() {
+                    const d = this.dailyLog || {};
+                    let summary = `📅 ${this.selectedDate}\n\n`;
+                    summary += `🇮🇱 IL Outreach: ${d.ilOutreached || 0} outreached, ${d.ilInterested || 0} interested\n`;
+                    if (d.ilInterviews) summary += `   Interviews: ${d.ilInterviews}\n`;
+                    summary += `\n🌍 Non-IL: ${d.nonIlOutreached || 0} outreached, ${d.nonIlInterested || 0} interested\n`;
+                    if (d.nonIlInterviews) summary += `   Interviews: ${d.nonIlInterviews}\n`;
+                    summary += `\n📞 Follow-ups: ${d.followupsCount || 0}`;
+                    if (d.followupsNotes) summary += ` - ${d.followupsNotes}`;
+                    summary += `\n\n👔 Senior HR: ${d.seniorHrOutreach || 0} outreach, ${d.seniorHrInterviews || 0} interviews\n`;
+                    if (d.seniorHrAlex) summary += `   With Alex: ${d.seniorHrAlex}\n`;
+                    if (d.additionalTasks) summary += `\n📝 Tasks: ${d.additionalTasks}\n`;
+                    if (d.blockers) summary += `\n⚠️ Blockers: ${d.blockers}`;
+                    return summary;
+                },
+
+                // Funnel methods
+                getStatusCount(status) {
+                    return (this.candidates || []).filter(c => c.status === status).length;
+                },
+                
+                getFunnelConversion(index) {
+                    if (index === 0) return 100;
+                    const prevStatus = STATUS_ORDER[index - 1];
+                    const currStatus = STATUS_ORDER[index];
+                    const prevCount = this.getStatusCount(prevStatus);
+                    const currCount = this.getStatusCount(currStatus);
+                    return prevCount > 0 ? Math.round((currCount / prevCount) * 100) : 0;
+                },
+                
+                getFunnelWidth(status) {
+                    const counts = STATUS_ORDER.map(s => this.getStatusCount(s));
+                    const maxCount = Math.max(...counts, 1);
+                    const currCount = this.getStatusCount(status);
+                    return Math.max((currCount / maxCount) * 100, 5);
+                },
+
+                getSourceReplyRate(source) {
+                    return (source.outreached || 0) > 0 ? Math.round(((source.replied || 0) / source.outreached) * 100) : 0;
+                },
+
+                getProgressColor(pct) {
+                    if (pct >= 80) return 'bg-emerald-500';
+                    if (pct >= 50) return 'bg-amber-500';
+                    return 'bg-red-500';
+                },
+
+                getConversionClass(pct) {
+                    if (pct > 60) return 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/50 dark:text-emerald-300';
+                    if (pct >= 30) return 'bg-amber-100 text-amber-700 dark:bg-amber-900/50 dark:text-amber-300';
+                    return 'bg-red-100 text-red-700 dark:bg-red-900/50 dark:text-red-300';
+                },
+
+                getStatusClass(status) {
+                    const classes = {
+                        'Leads Outreached': 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/50 dark:text-indigo-300',
+                        'Screened': 'bg-violet-100 text-violet-700 dark:bg-violet-900/50 dark:text-violet-300',
+                        'Alex Interview': 'bg-purple-100 text-purple-700 dark:bg-purple-900/50 dark:text-purple-300',
+                        'Eden Interview': 'bg-fuchsia-100 text-fuchsia-700 dark:bg-fuchsia-900/50 dark:text-fuchsia-300',
+                        'Kept For Future': 'bg-pink-100 text-pink-700 dark:bg-pink-900/50 dark:text-pink-300',
+                        'Offer Sent': 'bg-cyan-100 text-cyan-700 dark:bg-cyan-900/50 dark:text-cyan-300',
+                        'Hired': 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/50 dark:text-emerald-300',
+                        'Rejected': 'bg-red-100 text-red-700 dark:bg-red-900/50 dark:text-red-300'
+                    };
+                    return classes[status] || 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300';
+                },
+
+                getAvatarColor(idx) {
+                    const colors = ['bg-indigo-500', 'bg-emerald-500', 'bg-violet-500', 'bg-pink-500', 'bg-cyan-500', 'bg-amber-500'];
+                    return colors[(idx || 0) % colors.length];
+                },
+
+                getInitials(name) {
+                    return (name || 'N').split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
+                },
+
+                getFlag(country) {
+                    const flags = {
+                        'Philippines': '🇵🇭', 'Singapore': '🇸🇬', 'Poland': '🇵🇱', 'Ukraine': '🇺🇦', 'Israel': '🇮🇱',
+                        'United States': '🇺🇸', 'United Kingdom': '🇬🇧', 'Germany': '🇩🇪', 'India': '🇮🇳', 'Brazil': '🇧🇷',
+                        'Argentina': '🇦🇷', 'Mexico': '🇲🇽', 'Canada': '🇨🇦', 'Australia': '🇦🇺', 'South Africa': '🇿🇦',
+                        'Nigeria': '🇳🇬', 'Egypt': '🇪🇬'
+                    };
+                    return flags[country] || '🌍';
+                },
+
+                getSourceIcon(sourceId) {
+                    const src = this.allSources.find(s => s.id === sourceId);
+                    return src ? src.icon : '—';
+                },
+
+                getAutoSources(candidate) {
+                    if (!candidate || !candidate.contact) return [];
+                    const sources = [];
+                    if (candidate.contact.whatsapp) sources.push('whatsapp');
+                    if (candidate.contact.phone) sources.push('sms');
+                    if (candidate.contact.email) sources.push('email');
+                    if (candidate.contact.linkedin) sources.push('linkedin');
+                    if (candidate.contact.telegram) sources.push('telegram');
+                    return sources;
+                },
+
+                formatDate(dateStr) {
+                    if (!dateStr) return '—';
+                    try {
+                        return new Date(dateStr).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+                    } catch { return '—'; }
+                },
+
+                addCandidate() {
+                    const newCandidate = this.ensureCandidateStructure({
+                        id: uuid(),
+                        name: 'New Candidate',
+                        status: 'Leads Outreached',
+                        lastUpdate: new Date().toISOString()
+                    });
+                    newCandidate.timeline['Leads Outreached'] = new Date().toISOString().split('T')[0];
+                    this.candidates.push(newCandidate);
+                    this.saveAll();
+                    this.currentCandidate = this.candidates.length - 1;
+                    this.showCandidateModal = true;
+                },
+
+                removeCandidate(idx) {
+                    if (confirm('Remove this candidate?')) {
+                        this.candidates.splice(idx, 1);
+                        this.saveAll();
+                    }
+                },
+
+                openCandidateModal(idx) {
+                    this.currentCandidate = idx;
+                    this.showCandidateModal = true;
+                },
+
+                updateCandidateStatus(cIdx) {
+                    const c = this.candidates[cIdx];
+                    if (!c || !c.timeline) return;
+                    
+                    // Find the latest (highest priority) status with a date
+                    // Priority is reverse of STATUS_ORDER (later stages are higher priority)
+                    let latestStatus = 'Leads Outreached';
+                    let latestPriority = -1;
+                    
+                    STATUS_ORDER.forEach((status, priority) => {
+                        if (c.timeline[status] && priority > latestPriority) {
+                            latestStatus = status;
+                            latestPriority = priority;
+                        }
+                    });
+                    
+                    c.status = latestStatus;
+                    c.lastUpdate = new Date().toISOString();
+                },
+
+                getTimelineRowClass(date) {
+                    return date ? 'bg-emerald-50 dark:bg-emerald-900/20' : 'bg-gray-50 dark:bg-gray-700/30';
+                },
+
+                getTimelineDotClass(date, status) {
+                    if (!date) return 'bg-gray-300 dark:bg-gray-600';
+                    if (status === 'Rejected') return 'bg-red-500';
+                    const d = new Date(date);
+                    const today = new Date();
+                    return d > today ? 'bg-blue-500' : 'bg-emerald-500';
+                },
+
+                getTimelineStatusClass(date, status) {
+                    if (!date) return 'bg-gray-100 text-gray-500 dark:bg-gray-700 dark:text-gray-400';
+                    if (status === 'Rejected') return 'bg-red-100 text-red-600 dark:bg-red-900/50 dark:text-red-300';
+                    const d = new Date(date);
+                    const today = new Date();
+                    return d > today ? 'bg-blue-100 text-blue-600 dark:bg-blue-900/50 dark:text-blue-300' : 'bg-emerald-100 text-emerald-600 dark:bg-emerald-900/50 dark:text-emerald-300';
+                },
+
+                getTimelineStatusText(date, status) {
+                    if (!date) return 'Not started';
+                    if (status === 'Rejected') return 'Rejected';
+                    const d = new Date(date);
+                    const today = new Date();
+                    return d > today ? 'Scheduled' : 'Completed';
+                },
+
+                sendChatMessage(cIdx) {
+                    if (!this.chatMessage.trim() || cIdx === null || !this.candidates[cIdx]) return;
+                    if (!this.candidates[cIdx].chat) this.candidates[cIdx].chat = [];
+                    this.candidates[cIdx].chat.push({
+                        author: this.chatAuthor,
+                        text: this.chatMessage,
+                        timestamp: new Date().toLocaleString('en-GB', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' })
+                    });
+                    this.chatMessage = '';
+                    this.saveAll();
+                },
+
+                uploadVideo(event, cIdx) {
+                    const file = event.target.files[0];
+                    if (!file || cIdx === null || !this.candidates[cIdx]) return;
+                    if (file.size > 5 * 1024 * 1024) {
+                        alert('Video too large. Please use a link instead.');
+                        return;
+                    }
+                    const reader = new FileReader();
+                    reader.onload = (e) => {
+                        this.candidates[cIdx].video = e.target.result;
+                        this.saveAll();
+                    };
+                    reader.readAsDataURL(file);
+                },
+
+                addSatisfactionEntry() {
+                    this.satisfaction.push(this.ensureSatisfactionStructure({ id: uuid() }));
+                    this.saveAll();
+                },
+
+                removeSatisfactionEntry(idx) {
+                    this.satisfaction.splice(idx, 1);
+                    this.saveAll();
+                },
+
+                addIdea() {
+                    this.ideas.push(this.ensureIdeaStructure({ id: uuid() }));
+                    this.saveAll();
+                },
+
+                removeIdea(idx) {
+                    this.ideas.splice(idx, 1);
+                    this.saveAll();
+                },
+
+                exportData() {
+                    const data = {
+                        kpis: this.kpis,
+                        sources: this.sources,
+                        candidates: this.candidates,
+                        satisfaction: this.satisfaction,
+                        ideas: this.ideas,
+                        dailyLogs: JSON.parse(localStorage.getItem('dailyLogs') || '{}')
+                    };
+                    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = 'dashboard-export-' + new Date().toISOString().split('T')[0] + '.json';
+                    a.click();
+                }
+            }
+        }
+    </script>
+</body>
+</html>
